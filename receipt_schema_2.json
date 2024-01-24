@@ -5,7 +5,7 @@
         "retailer": {
             "description": "The name of the retailer or store the receipt is from.",
             "type": "string",
-            "pattern": "^\\S+$",
+            "pattern": "^[\\S ]+$",
             "example": "Target"
         },
         "purchaseDate": {

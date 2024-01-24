@@ -1,0 +1,2 @@
+schema_file: "receipt_schema_2.json"
+log_file: "requests.log"

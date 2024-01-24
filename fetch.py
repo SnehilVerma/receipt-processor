@@ -1,12 +1,8 @@
 from flask import Flask, request, jsonify
-from jsonschema import validate, ValidationError
-import json
-import os
 import uuid
-import math
+from helper import calculate_points,validate_receipt, setup_logging, logger, setup_config
+import constants
 
-current_file_path = os.path.abspath(__file__)
-current_directory = os.path.dirname(current_file_path)
 app = Flask(__name__)
 
 
@@ -18,7 +14,7 @@ def process_receipts():
     
     receipt_valid = validate_receipt(receipt_data)
     if not receipt_valid:
-        return jsonify({'description': "The receipt is invalid"}), 400
+        return jsonify({'description': constants.INVALID_RECEIPT}), 400
 
     points = calculate_points(receipt_data=receipt_data)
     
@@ -26,6 +22,7 @@ def process_receipts():
 
     points_storage[receipt_id] = points
 
+    logger.info(f"{constants.VALID_RECEIPT} {points} , {receipt_id}")
     return jsonify({'id': receipt_id})
 
 
@@ -33,100 +30,14 @@ def process_receipts():
 def get_points_for_receipt(receipt_id):
 
     if receipt_id not in points_storage:
-        return jsonify({'description': 'No receipt found for that id'}), 404
+        return jsonify({'description': constants.INVALID_RECEIPT_ID}), 404
 
     points = points_storage[receipt_id]
 
+    logger.info(f"{constants.VALID_RECEIPT_ID} {points}")
     return jsonify({'points': points})
-
-def calculate_points(receipt_data):
-    receipt_points = 0
-    
-    retailer_name = receipt_data["retailer"]
-    purchase_date = receipt_data["purchaseDate"]
-    purchase_time = receipt_data["purchaseTime"]
-    total = receipt_data["total"]
-    items = receipt_data["items"]
-
-    receipt_points += retailer_points(retailer_name)
-    receipt_points += date_and_time_points(purchase_date,purchase_time)
-    receipt_points += amount_total_points(total_amount=float(total))
-    receipt_points += items_points(items)
-
-    print(f"points accumulated -> {receipt_points}")
-    return receipt_points
-    
-
-
-def retailer_points(retailer_name):
-    points = 0
-    for char in retailer_name:
-        if char.isalnum():
-            points += 1
-    
-    # print(f"retailer points {points}")
-    return points
-
-def date_and_time_points(purchase_date,purchase_time):
-    points = 0
-    date_tokens = purchase_date.split("-")
-    day = int(date_tokens[2])
-    if day%2 != 0:
-        points += 6
-    time_tokens = purchase_time.split(":")
-    hour = time_tokens[0]
-    if hour>="14" and hour<"16":
-        points += 10
-    
-    # print(f"date time {points}")
-    return points
-    
-
-def amount_total_points(total_amount):
-    points = 0
-    if total_amount == int(total_amount):
-        points += 50
-        points += 25 #round dollar amount will always be a multiple of 0.25
-        # print(f"total points {points}")
-        return points
-    if total_amount % 0.25 == 0:
-        points = 25
-        # print(f"total points {points}")
-        return points
-
-    return points
-
-def items_points(items):
-    points = 0
-    items_count = len(items)
-    points += (items_count//2) * 5
-    for item in items:
-        price = float(item["price"])
-        desc = item["shortDescription"]
-        desc = desc.strip()
-        if len(desc) % 3 == 0:
-            price = price * 0.2
-            points += math.ceil(price)
-
-    # print(f"items points {points}")
-    return points
-
-def load_schema_file():
-    json_file_path = current_directory + os.sep + "receipt_schema_2.json"
-    with open(json_file_path, 'r') as json_file:
-        data = json.load(json_file)
-    
-    return data
-
-def validate_receipt(receipt_data):
-    schema = load_schema_file()
-    try:
-        validate(instance=receipt_data, schema=schema)
-        return True  # Validation successful
-    except ValidationError as e:
-        # print(f"Validation error: {e}")
-        return False  # Validation failed
 
 
 if __name__ == '__main__':
+    setup_config()
     app.run(host='0.0.0.0', port=6000,debug=True)
