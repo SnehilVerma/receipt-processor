@@ -6,12 +6,18 @@ import math
 import logging
 import constants
 import yaml
+import uuid
 
 
 logger = logging.getLogger(__name__)
 current_file_path = os.path.abspath(__file__)
 current_directory = os.path.dirname(current_file_path)
 
+
+def generate_unique_id():
+    # unique ID for the receipt
+    uuid_key =  str(uuid.uuid4())
+    return uuid_key
 
 def calculate_points(receipt_data):
     receipt_points = 0
@@ -27,7 +33,7 @@ def calculate_points(receipt_data):
     receipt_points += amount_total_points(total_amount=float(total))
     receipt_points += items_points(items)
 
-    print(f"points accumulated -> {receipt_points}")
+    logger.info(f"points accumulated -> {receipt_points}")
     return receipt_points
 
 
@@ -37,7 +43,7 @@ def retailer_points(retailer_name):
         if char.isalnum():
             points += constants.SINGLE_POINT
     
-    # print(f"retailer points {points}")
+    logger.info(f"retailer points {points}")
     return points
 
 def date_and_time_points(purchase_date,purchase_time):
@@ -51,7 +57,7 @@ def date_and_time_points(purchase_date,purchase_time):
     if hour>="14" and hour<"16":
         points += constants.TIME_2_TO_4_POINTS
     
-    # print(f"date time {points}")
+    logger.info(f"date time points {points}")
     return points
     
 
@@ -59,14 +65,11 @@ def amount_total_points(total_amount):
     points = 0
     if total_amount == int(total_amount):
         points += constants.NO_CENT_POINTS
-        points += constants.QUARTER_DOLLAR_MULTIPLE_POINTS #round dollar amount will always be a multiple of 0.25
-        # print(f"total points {points}")
-        return points
+        
     if total_amount % 0.25 == 0:
-        points = constants.QUARTER_DOLLAR_MULTIPLE_POINTS
-        # print(f"total points {points}")
-        return points
+        points += constants.QUARTER_DOLLAR_MULTIPLE_POINTS
 
+    logger.info(f"amount total points {points}")
     return points
 
 def items_points(items):
@@ -81,10 +84,13 @@ def items_points(items):
             price = price * 0.2
             points += math.ceil(price)
 
-    # print(f"items points {points}")
+    logger.info(f"items points {points}")
     return points
 
 def load_schema_file(schema_file):
+    if not schema_file:
+        raise FileNotFoundError
+    
     json_file_path = current_directory + os.sep + schema_file
     with open(json_file_path, 'r') as json_file:
         data = json.load(json_file)
@@ -95,10 +101,10 @@ def load_schema_file(schema_file):
 def validate_receipt(receipt_data):
     try:
         if not schema:
-            raise FileNotFoundError
+            raise Exception("validation schema not found")
         
         validate(instance=receipt_data, schema=schema)
-        return True  # Validation successful
+        return True
     except ValidationError as e:
         logger.info(constants.INVALID_RECEIPT_SCHEMA)
         return False  # Validation failed
@@ -106,14 +112,22 @@ def validate_receipt(receipt_data):
 
 def setup_config():
     yaml_file_path = current_directory + os.sep + constants.CONFIG_FILE
-    print(yaml_file_path)
+
     with open(yaml_file_path, 'r') as file:
         yaml_data = yaml.safe_load(file)
+        if "log_file" not in yaml_data:
+            raise Exception("log file not found in config")
         setup_logging(request_logs_file=yaml_data["log_file"])
+
+        if "schema_file" not in yaml_data:
+            raise Exception("input schema file not found in config")
         load_schema_file(schema_file=yaml_data["schema_file"])
 
 
 def setup_logging(request_logs_file):
+    if not request_logs_file:
+        raise FileNotFoundError
+    
     logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
     log_file = current_directory + os.sep + request_logs_file
 

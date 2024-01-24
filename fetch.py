@@ -1,6 +1,5 @@
 from flask import Flask, request, jsonify
-import uuid
-from helper import calculate_points,validate_receipt, setup_logging, logger, setup_config
+from helper import calculate_points,validate_receipt, logger, setup_config, generate_unique_id
 import constants
 
 app = Flask(__name__)
@@ -18,7 +17,7 @@ def process_receipts():
 
     points = calculate_points(receipt_data=receipt_data)
     
-    receipt_id = str(uuid.uuid4()) # unique ID for the receipt
+    receipt_id = generate_unique_id() 
 
     points_storage[receipt_id] = points
 
