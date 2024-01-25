@@ -1,3 +1,8 @@
+"""
+This module has helper methods which are used by the service for points calculation, input validation and id generation
+"""
+
+
 from flask import Flask, request, jsonify
 from jsonschema import validate, ValidationError
 import json

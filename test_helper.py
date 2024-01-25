@@ -1,3 +1,8 @@
+"""
+This module contains a few pytests to unit test helper methods.
+"""
+
+
 import pytest
 import json,os
 from helper import (

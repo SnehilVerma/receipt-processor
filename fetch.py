@@ -1,14 +1,24 @@
+"""
+This module has the endpoints for the service. It sets up the Flask service with the supported endpoints.
+"""
+
 from flask import Flask, request, jsonify
 from helper import calculate_points,validate_receipt, logger, setup_config, generate_unique_id
 import constants
 
 app = Flask(__name__)
 
-
 points_storage = {}
+
 
 @app.route('/receipts/process', methods=['POST'])
 def process_receipts():
+    """
+    Endpoint to process receipt data.
+
+    :return: JSON response with receipt ID or error description.
+    """
+
     receipt_data = request.json
     
     receipt_valid = validate_receipt(receipt_data)
@@ -27,6 +37,12 @@ def process_receipts():
 
 @app.route('/receipts/<receipt_id>/points', methods=['GET'])
 def get_points_for_receipt(receipt_id):
+    """
+    Endpoint to retrieve points for a given receipt ID.
+
+    :param receipt_id: Unique identifier for the receipt.
+    :return: JSON response with points or error description.
+    """
 
     if receipt_id not in points_storage:
         return jsonify({'description': constants.INVALID_RECEIPT_ID}), 404
